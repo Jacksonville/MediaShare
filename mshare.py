@@ -2,6 +2,16 @@
 __version__ = '0.0.0.1'
 import argparse, bottle, os, logging, datetime, sys, threading, zipfile
 from PIL import Image
+from beaker.middleware import SessionMiddleware
+
+session_opts = {
+    'session.type': 'file',
+    'session.cookie_expires': 300,
+    'session.data_dir': './data',
+    'session.auto': True
+}
+
+
 
 rootdir = os.path.split(os.path.abspath(__file__))[0]
 if not os.path.exists(os.path.join(rootdir, 'logs')):
@@ -128,6 +138,9 @@ class DirPrep(threading.Thread):
 class WebServer(object):
     def __init__(self, args, imgloader):
         self.directory = args.path
+        self.password = args.password
+        if self.password:
+            self.auth = self.password.encode('rot13')
         self.imgloader = imgloader
 
     def __new__(cls, *args, **kwargs):
@@ -136,9 +149,34 @@ class WebServer(object):
         bottle.route("/")(obj.render_directory)
         bottle.route("/dl")(obj.download_file)
         bottle.route("/load_images")(obj.load_images)
+        bottle.get("/login")(obj.login_get)
+        bottle.post("/login")(obj.login_post)
         return obj
 
+    def is_auth(self):
+        if self.password:
+            s = bottle.request.environ.get('beaker.session')
+            auth = s.get('authkey','') 
+            if self.auth == auth:
+                return True
+            else:
+                bottle.redirect('/login')
+
+    def login_post(self):
+        password = bottle.request.POST.get('password')
+        if password == self.password:
+            s = bottle.request.environ.get('beaker.session')
+            s['authkey'] = s.get('authkey',self.auth)
+            s.save()
+            bottle.redirect('/')
+        else:
+            return """<html><meta http-equiv='refresh' content='5; url=/login'><p>Invalid Password</p></html>"""
+
+    def login_get(self):
+        return bottle.template('login')
+
     def load_images(self):
+        self.is_auth()
         self.imgloader.start()
         return "<html><meta http-equiv='refresh' content='5; url=/'><p>Image reload initiated</p></html>"
 
@@ -148,9 +186,11 @@ class WebServer(object):
         return dirlist, filelist
 
     def get_static_files(self, file, path):
+        self.is_auth()
         return bottle.static_file(file, root=os.path.join(appPath,'static',path))
 
     def render_directory(self):
+        self.is_auth()
         ldir = os.path.join(self.directory, bottle.request.GET.get('dir','/')[1:])
         dirlist, filelist = self.list_dir(ldir)
         if ldir != self.directory:
@@ -179,10 +219,13 @@ if __name__ == '__main__':
     parser.add_argument('--host',
                         help='IP address that the webserver should bind on',
                         default='127.0.0.1')
+    parser.add_argument('--password',
+                        help='Your desired password',
+                        default=None)
     args = parser.parse_args()
     prep = DirPrep(args)
     port = args.port
     host = args.host
     obj = WebServer(args, prep)
-    app = bottle.app()
+    app = SessionMiddleware(bottle.app(), session_opts)
     bottle.run(app=app, host=host, port=int(port), server='tornado', reloader=True)

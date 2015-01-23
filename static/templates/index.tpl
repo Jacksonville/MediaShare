@@ -2,7 +2,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Media Share</title>
+    <title>Image Sharer</title>
     <link rel="stylesheet" href="/static/css/bootstrap.css" />
     <link rel="stylesheet" href="/static/css/jquery.fancybox.css" />
     <style type="text/css">
@@ -15,7 +15,7 @@
     <div class="container-fluid">
         <div class="row">
           <div class="col-md-12 col-lg-12">
-            <h1>Media Share</h1>
+            <h1>Image Sharer</h1>
           </div>
         </div>
         <div class="row">
