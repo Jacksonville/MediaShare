@@ -10,6 +10,8 @@ There are some optional arguments as well:
 - host     : IP address that you would like your webserver to bind to.
 - password : Password to keep your data secure, is ommited no password is required to access your data.
 
+Once the webserver is started up, navigate to [your_url]/load_images from your browser to initialise the image loading process.
+
 ##Deps:
 You might need to install the following packages from the cheeseshop:
 - pillow: https://pypi.python.org/pypi/Pillow/
